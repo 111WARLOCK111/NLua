@@ -1,3 +1,3 @@
-[submodule "Core/gblua"]
-	path = Core/gblua
+[submodule "NLua/gblua"]
+	path = NLua/gblua
 	url = https://github.com/111WARLOCK111/gblua
