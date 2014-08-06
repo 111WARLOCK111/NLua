@@ -72,6 +72,7 @@ namespace NLua
 		public LuaNativeFunction LessThanOrEqualFunction { get; private set; }
 
 		Dictionary<object, object> memberCache = new Dictionary<object, object> ();
+        Dictionary<Type, List<Tuple<string, object>>> memberObj = new Dictionary<Type, List<Tuple<string, object>>>();
 		ObjectTranslator translator;
 
 		/*
@@ -117,6 +118,8 @@ namespace NLua
 			EqualFunction = new LuaNativeFunction (MetaFunctions.EqualLua);
 			LessThanFunction = new LuaNativeFunction (MetaFunctions.LessThanLua);
 			LessThanOrEqualFunction = new LuaNativeFunction (MetaFunctions.LessThanOrEqualLua);
+
+            memberObj = new Dictionary<Type, List<Tuple<string, object>>>();
 		}
 
 		/*
@@ -645,6 +648,28 @@ namespace NLua
 				}
 			}
 
+            if (memberObj.ContainsKey(objType))
+            {
+                bool found = false;
+                object tp = null;
+
+                foreach (var db in memberObj[objType])
+                {
+                    if (db.Item1 == methodName)
+                    {
+                        tp = db.Item2;
+                        found = true;
+                    }
+                }
+
+                if (found)
+                {
+                    translator.Push(luaState, tp);
+                    translator.Push(luaState, true);
+                    return 2;
+                }
+            }
+
 			LuaLib.LuaPushBoolean (luaState, false);
 			return 2;
 		}
@@ -823,8 +848,38 @@ namespace NLua
 				// kevinh - we want to throw an exception because meerly returning 'nil' in this case
 				// is not sufficient.  valid data members may return nil and therefore there must be some
 				// way to know the member just doesn't exist.
-				translator.ThrowError (luaState, "unknown member name " + methodName);
-				LuaLib.LuaPushNil (luaState);
+                if (!memberObj.ContainsKey(objType.UnderlyingSystemType))
+                {
+                    translator.ThrowError(luaState, "unknown member name " + methodName);
+                    LuaLib.LuaPushNil(luaState);
+                }
+                else
+                {
+                    bool found = false;
+
+                    object tp = null;
+
+                    foreach (var mp in memberObj[objType.UnderlyingSystemType])
+                    {
+                        if (mp.Item1 == methodName)
+                        {
+                            found = true;
+                            tp = mp.Item2;
+                        }
+                    }
+
+                    if (!found)
+                    {
+                        translator.ThrowError(luaState, "unknown member name " + methodName);
+                        LuaLib.LuaPushNil(luaState);
+                    }
+                    else
+                    {
+                        translator.Push(luaState, tp);
+                        translator.Push(luaState, true);
+                        return 2;
+                    }
+                }
 			}
 
 			// push false because we are NOT returning a function (see luaIndexFunction)
@@ -984,8 +1039,33 @@ namespace NLua
 					member = members [0];
 					SetMemberCache (memberCache, targetType, fieldName, member);
 				} else {
-					detailMessage = "field or property '" + fieldName + "' does not exist";
-					return false;
+                    if (memberObj.ContainsKey(targetType.UnderlyingSystemType))
+                    {
+                        int ind = 0;
+                        int tind = 0;
+                        bool found = false;
+                        foreach (var db in memberObj[targetType.UnderlyingSystemType])
+                        {
+                            if (db.Item1 == fieldName)
+                            {
+                                tind = ind;
+                                found = true;
+                            }
+                            ind++;
+                        }
+                        if (found)
+                            memberObj[targetType.UnderlyingSystemType][tind] = new Tuple<string, object>(fieldName, translator.GetAsType(luaState, 3, typeof(object)));
+                        else
+                            memberObj[targetType.UnderlyingSystemType].Add(new Tuple<string, object>(fieldName, translator.GetAsType(luaState, 3, typeof(object))));
+                    }
+                    else
+                    {
+                        memberObj[targetType.UnderlyingSystemType] = new List<Tuple<string, object>>();
+
+                        memberObj[targetType.UnderlyingSystemType].Add(new Tuple<string, object>(fieldName, translator.GetAsType(luaState, 3, typeof(object))));
+                    }
+					//detailMessage = "field or property '" + fieldName + "' does not exist";
+					return true;
 				}
 			}
 

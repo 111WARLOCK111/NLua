@@ -115,16 +115,12 @@
   </Target>
   -->
   <ItemGroup>
-    <ProjectReference Include="..\KeraLua\src\KeraLua.Net40.csproj">
-      <Project>{47153754-10F5-44D8-B578-F5A32B69061A}</Project>
-      <Name>KeraLua.Net40</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\KopiLua\KopiLua\KopiLua.Net40.csproj">
-      <Project>{E8DDBC21-EF74-4ABA-9C49-BFC702BE25D8}</Project>
-      <Name>KopiLua.Net40</Name>
-    </ProjectReference>
+    <None Include="key.snk" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="key.snk" />
+    <ProjectReference Include="gblua\KeraLua\KeraLua.csproj">
+      <Project>{47153754-10f5-44d8-b578-f5a32b69061a}</Project>
+      <Name>KeraLua</Name>
+    </ProjectReference>
   </ItemGroup>
 </Project>
